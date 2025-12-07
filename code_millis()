@@ -1,0 +1,123 @@
+// -------------------------------------------------------------
+// 交通號誌控制系統（狀態機版本）
+// 功能：一般循環 + 行人請求 + 非阻塞計時（millis）
+// 使用時序millis()的方式，來避免delay狀態中全卡死的問題
+// -------------------------------------------------------------
+
+// 定義交通狀態（每一種燈號就是一個「狀態」）
+enum TrafficState { 
+  STATE_GREEN,       // 綠燈狀態
+  STATE_YELLOW,      // 黃燈狀態
+  STATE_RED,         // 紅燈狀態
+  STATE_PEDESTRIAN   // 行人通行狀態（按下 P 時觸發）
+};
+
+// 當前狀態（預設從綠燈開始）
+TrafficState currentState = STATE_GREEN;
+
+// 時間紀錄（用來取代 delay）
+unsigned long stateStartTime = 0;  // 某個狀態開始的時間點
+unsigned long nowTime = 0;         // 目前時間
+
+// 用來接收序列輸入
+String input = "";
+bool pedRequest = false;  // 是否收到行人按鈕請求（P）
+ 
+void setup() {
+  Serial.begin(9600);  // 開啟序列通訊
+  Serial.println("Traffic Light System (State Machine Version)");
+  
+  // 初始化狀態開始時間
+  stateStartTime = millis();
+}
+
+void loop() {
+  nowTime = millis();  // 每次循環更新現在時間
+
+  checkInput();        // 檢查 Serial Monitor 是否輸入了按鈕
+  runStateMachine();   // 執行狀態機邏輯
+}
+
+// -------------------------------------------------------------
+// 函式：檢查是否有序列輸入（例如 P）
+// -------------------------------------------------------------
+void checkInput() {
+  if (Serial.available()) {                           // 如果序列有資料可以讀
+    input = Serial.readStringUntil('\n');             // 讀一行字
+    
+    if (input == "P" || input == "p") {               // 如果使用者輸入 P/p
+      pedRequest = true;                              // 標記行人請求
+      Serial.println("[EVENT] Pedestrian request received.");
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 函式：執行交通號誌「狀態機」邏輯
+// -------------------------------------------------------------
+void runStateMachine() {
+
+  switch (currentState) {
+
+    // ------------------------------
+    // 綠燈狀態
+    // ------------------------------
+    case STATE_GREEN:
+      Serial.println("STATE: GREEN");
+
+      // 如果行人按鈕按下 → 馬上切到行人模式
+      if (pedRequest) {
+        currentState = STATE_PEDESTRIAN;
+        pedRequest = false;                    // 重置請求
+        stateStartTime = nowTime;              // 重設計時
+      } 
+      // 如果綠燈已經亮超過 4000ms（4 秒）
+      else if (nowTime - stateStartTime > 4000) {
+        currentState = STATE_YELLOW;           // 進入黃燈狀態
+        stateStartTime = nowTime;
+      }
+      break;
+
+    // ------------------------------
+    // 黃燈狀態
+    // ------------------------------
+    case STATE_YELLOW:
+      Serial.println("STATE: YELLOW");
+
+      // 黃燈 2 秒後切換紅燈
+      if (nowTime - stateStartTime > 2000) {
+        currentState = STATE_RED;
+        stateStartTime = nowTime;
+      }
+      break;
+
+    // ------------------------------
+    // 紅燈狀態
+    // ------------------------------
+    case STATE_RED:
+      Serial.println("STATE: RED");
+
+      // 紅燈 4 秒後 → 回到綠燈
+      if (nowTime - stateStartTime > 4000) {
+        currentState = STATE_GREEN;
+        stateStartTime = nowTime;
+      }
+      break;
+
+    // ------------------------------
+    // 行人通行狀態（按 P 觸發）
+    // ------------------------------
+    case STATE_PEDESTRIAN:
+      Serial.println("STATE: PEDESTRIAN (Crossing)");
+
+      // 行人通行 5 秒後 → 先切回紅燈，再恢復正常循環
+      if (nowTime - stateStartTime > 5000) {
+        Serial.println("Returning to normal cycle...");
+        currentState = STATE_RED;              // 從紅燈開始恢復
+        stateStartTime = nowTime;
+      }
+      break;
+  }
+
+  delay(500);  // 讓輸出節制一點，不要刷太快
+}
