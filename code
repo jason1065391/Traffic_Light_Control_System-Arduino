@@ -1,0 +1,52 @@
+String input = "";
+bool pedestrianRequest = false;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Traffic Light System Ready");
+}
+
+void loop() {
+
+  // 檢查是否有輸入
+  if (Serial.available()) {
+    input = Serial.readStringUntil('\n');
+
+    if (input == "P" || input == "p") {
+      Serial.println("[BUTTON] Pedestrian button pressed!");
+      pedestrianRequest = true;
+    }
+  }
+
+  // 如果沒有行人請求 → 正常循環
+  if (!pedestrianRequest) {
+    normalCycle();
+  }
+  else {
+    pedestrianCycle();
+    pedestrianRequest = false; // 重置請求
+  }
+}
+
+void normalCycle() {
+  Serial.println("GREEN LIGHT");
+  delay(4000);
+
+  Serial.println("YELLOW LIGHT");
+  delay(2000);
+
+  Serial.println("RED LIGHT");
+  delay(4000);
+}
+
+void pedestrianCycle() {
+  Serial.println("[Pedestrian] Transition to RED...");
+
+  Serial.println("YELLOW LIGHT (short)");
+  delay(1000);
+
+  Serial.println("RED LIGHT - Pedestrians crossing");
+  delay(5000);
+
+  Serial.println("Resuming normal cycle...");
+}
