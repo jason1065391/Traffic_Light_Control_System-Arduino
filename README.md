@@ -13,9 +13,6 @@
 使用者可在 Arduino 序列埠輸入："p" 代表行人按下按鈕（模擬按鈕觸發）。
 
 觸發流程：
-中斷目前循環
-縮短黃燈
-進入紅燈（讓行人通行）
-完成後回到一般循環
+中斷目前循環 縮短黃燈，加快進入紅燈（讓行人通行），完成後回到一般循環
 
 <img width="659" height="401" alt="image" src="https://github.com/user-attachments/assets/124f8255-e1ac-4dfe-8a9e-80b8cad4f240" />
